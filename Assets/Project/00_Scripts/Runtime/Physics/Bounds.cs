@@ -55,9 +55,10 @@ public class Bounds : IDisposable
             
             Vector3 finalPosition = new Vector3(x, y, z);
 
-            if (oldPosition != finalPosition && target.TryGetComponent(out Ball ball)) 
+            if (oldPosition != finalPosition && target.TryGetComponent(out Ball ball))
             {
-                EventBus<OnContactBall>.Raise(new OnContactBall(ball,finalPosition));
+                Vector3 normal = GetNormal(oldPosition, finalPosition);
+                EventBus<OnContactBall>.Raise(new OnContactBall(ball, finalPosition, normal));
             }
             
             target.position = finalPosition;
@@ -67,6 +68,10 @@ public class Bounds : IDisposable
     private float CalculateBoundaries(float posAxes,float centerAxes,float sizeAxes) => 
         Mathf.Clamp(posAxes, centerAxes - sizeAxes/2, centerAxes + sizeAxes/2);
     
-    //private Vector3 GetNormals()
+    private Vector3 GetNormal(Vector3 oldPosition, Vector3 clampedPosition) =>
+        new Vector3(
+            Math.Sign(clampedPosition.x - oldPosition.x),
+            Math.Sign(clampedPosition.y - oldPosition.y),
+            Math.Sign(clampedPosition.z - oldPosition.z)).normalized;
     
 }

@@ -3,13 +3,14 @@ using UnityEngine;
 
 public readonly struct OnContactBall : IEvent
 {
-    public readonly Vector3 hitPosition;
     public readonly Ball ball;
+    public readonly Vector3 position;
+    public readonly Vector3 normal;
 
-    public OnContactBall(Ball ball,Vector3 hitPosition)
+    public OnContactBall(Ball ball, Vector3 position, Vector3 normal)
     {
         this.ball = ball;
-        this.hitPosition = hitPosition;
+        this.position = position;
+        this.normal = normal;
     }
-    
 }

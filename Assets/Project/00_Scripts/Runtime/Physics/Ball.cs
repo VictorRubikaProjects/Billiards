@@ -1,67 +1,65 @@
-using System;
 using Event_Bus;
 using UnityEngine;
 
-public class Ball : MonoBehaviour
+public abstract class Ball : MonoBehaviour
 {
-    private EventBinding<OnContactBall> m_onContactBinding;
-    private float m_currentSpeed = 0;
-    
-    private void Start()
+    public Vector3 Velocity
     {
-        EventBus<OnBallSpawnEvent>.Raise(new OnBallSpawnEvent(
-            transform,
-            this));
+        get => transform.forward * m_currentSpeed;
+        set
+        {
+            m_currentSpeed = value.magnitude;
+            if (m_currentSpeed > 0.0001f)
+                transform.rotation = Quaternion.LookRotation(value / m_currentSpeed, Vector3.up);
+        }
+    }
+
+    private EventBinding<OnContactBall> m_onContactBinding;
+    private EventBinding<OnTriggerZoneEnter> m_onTriggerBinding;
+
+    private float m_currentSpeed;
+
+    protected virtual void Start()
+    {
+        EventBus<OnBallSpawnEvent>.Raise(new OnBallSpawnEvent(transform, this));
 
         m_onContactBinding = new EventBinding<OnContactBall>(OnContactWall);
-        
+        m_onTriggerBinding = new EventBinding<OnTriggerZoneEnter>(OnZoneEnter);
+
         EventBus<OnContactBall>.Register(m_onContactBinding);
+        EventBus<OnTriggerZoneEnter>.Register(m_onTriggerBinding);
     }
 
-    private void Update()
-    {
-        HandleMoving();
-    }
+    private void Update() => HandleMoving();
 
-    private void OnDestroy()
+    protected virtual void OnDestroy()
     {
-        EventBus<OnBallDespawnEvent>.Raise(new OnBallDespawnEvent(
-            transform,
-            this));
-        
+        EventBus<OnBallDespawnEvent>.Raise(new OnBallDespawnEvent(transform, this));
+
         EventBus<OnContactBall>.Unregister(m_onContactBinding);
+        EventBus<OnTriggerZoneEnter>.Unregister(m_onTriggerBinding);
     }
 
-    public void Rotate(bool right)
-    {
-        float direction = right ? 1 : -1;
-        transform.Rotate(Vector3.up, direction * Time.deltaTime * 60f);
-    }
+    protected abstract void HandleZoneEntered();
 
-    private void OnDrawGizmos()
+    private void OnZoneEnter(OnTriggerZoneEnter e)
     {
-        Gizmos.color = Color.blue;
-        Gizmos.DrawRay(transform.position, transform.forward * 0.2f);
+        if (e.ball != this) return;
+        HandleZoneEntered();
     }
 
     private void OnContactWall(OnContactBall e)
     {
-        Vector3 direction = e.hitPosition - e.ball.transform.position;
-        
-        
-    }
+        if (e.ball != this) return;
 
-    public void Shoot()
-    {
-        Vector3 direction = transform.forward;
-        m_currentSpeed = 2; 
+        Vector3 reflected = Vector3.Reflect(transform.forward, e.normal);
+        transform.rotation = Quaternion.LookRotation(reflected, Vector3.up);
+        m_currentSpeed *= 0.8f;
     }
 
     private void HandleMoving()
     {
-        Vector3 nextPosition = transform.position + transform.forward * (m_currentSpeed * Time.deltaTime);
-        
-        transform.position = nextPosition;
+        transform.position += transform.forward * (m_currentSpeed * Time.deltaTime);
 
         if (m_currentSpeed <= 0.05f) m_currentSpeed = 0;
 
